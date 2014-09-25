@@ -171,6 +171,7 @@ describe Chef::Application::Client, "run_application", :unix_only do
     Chef::Config[:daemonize] = true
     @pipe = IO.pipe
     @app = Chef::Application::Client.new
+    @app.setup_signal_handlers
     # Default logger doesn't work correctly when logging from a trap handler.
     @app.configure_logging
     Chef::Daemon.stub(:daemonize).and_return(true)
@@ -207,7 +208,8 @@ describe Chef::Application::Client, "run_application", :unix_only do
 
         run_count += 1
         if run_count > 3
-          exit 0
+          # If we exit with 0, this will cause the test to pass falsely.
+          exit 128
         end
 
         # If everything is fine, sending USR1 to self should prevent
