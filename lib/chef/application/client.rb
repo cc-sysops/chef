@@ -298,8 +298,9 @@ class Chef::Application::Client < Chef::Application
     Chef::Daemon.change_privilege
   end
 
-  # Run the chef client, optionally daemonizing or looping at intervals.
-  def run_application
+  def setup_signal_handlers
+    super
+
     unless Chef::Platform.windows?
       SELF_PIPE.replace IO.pipe
 
@@ -307,7 +308,13 @@ class Chef::Application::Client < Chef::Application
         Chef::Log.info("SIGUSR1 received, waking up")
         SELF_PIPE[1].putc(IMMEDIATE_RUN_SIGNAL) # wakeup master process from select
       end
+    end
+  end
 
+  # Run the chef client, optionally daemonizing or looping at intervals.
+  def run_application
+    unless Chef::Platform.windows?
+      SELF_PIPE.replace IO.pipe
       # see CHEF-5172
       if Chef::Config[:daemonize] || Chef::Config[:interval]
         trap("TERM") do
