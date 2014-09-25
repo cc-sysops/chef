@@ -45,22 +45,32 @@ class Chef
 
       def initialize(positivity, parent_resource, command=nil, command_opts={}, &block)
         @positivity = positivity
-        case command
+        @command, @command_opts = command, command_opts
+        @block = block
+        @block_given = block_given?
+        @parent_resource = parent_resource
+
+        raise ArgumentError, "only_if/not_if requires either a command or a block" unless command || block_given?
+      end
+
+      def configure
+        case @command
         when String
-          @guard_interpreter = new_guard_interpreter(parent_resource, command, command_opts, &block)
-          @command, @command_opts = command, command_opts
+          @guard_interpreter = new_guard_interpreter(@parent_resource, @command, @command_opts, &@block)
           @block = nil
         when nil
-          raise ArgumentError, "only_if/not_if requires either a command or a block" unless block_given?
+          raise ArgumentError, "only_if/not_if requires either a command or a block" unless @block_given
           @guard_interpreter = nil
           @command, @command_opts = nil, nil
-          @block = block
         else
           raise ArgumentError, "Invalid only_if/not_if command: #{command.inspect} (#{command.class})"
         end
       end
 
       def continue?
+        # configure late in case guard_interpreter is specified on the resource after the conditional
+        configure
+
         case @positivity
         when :only_if
           evaluate
